@@ -3,6 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
 from PIL import Image
+import numpy as np
 from src.api.main import app
 
 @pytest.fixture
@@ -15,6 +16,23 @@ def sample_image(tmp_path):
     image_path = tmp_path / "test.jpg"
     image = Image.new('RGB', (100, 100), color='red')
     image.save(image_path)
+    return image_path
+
+@pytest.fixture
+def realistic_image(tmp_path):
+    # Create a more realistic image for testing captioning
+    # Create a simple scene with a blue sky and green ground
+    image = Image.new('RGB', (224, 224))
+    pixels = np.array(image)
+    
+    # Blue sky (top half)
+    pixels[:112, :] = [135, 206, 235]  # Sky blue
+    # Green ground (bottom half)
+    pixels[112:, :] = [34, 139, 34]    # Forest green
+    
+    image = Image.fromarray(pixels.astype('uint8'))
+    image_path = tmp_path / "scene.jpg"
+    image.save(image_path, quality=95)
     return image_path
 
 @pytest.fixture(autouse=True)
@@ -111,4 +129,64 @@ def test_concurrent_uploads(client, sample_image):
     # Verify all uploads were successful and unique
     assert len(paths) == 5
     assert len(set(paths)) == 5  # All paths should be unique
-    assert all(os.path.exists(path) for path in paths) 
+    assert all(os.path.exists(path) for path in paths)
+
+def test_process_image_with_caption(client, realistic_image):
+    """
+    End-to-end test of image processing with real caption generation.
+    Tests both the file upload and caption generation with the actual BLIP model.
+    """
+    with open(realistic_image, "rb") as f:
+        response = client.post(
+            "/process/",
+            files={"file": ("scene.jpg", f, "image/jpeg")}
+        )
+    
+    assert response.status_code == 200
+    data = response.json()
+    
+    # Verify file handling
+    assert "file_path" in data
+    assert os.path.exists(data["file_path"])
+    
+    # Verify caption generation
+    assert "caption" in data
+    assert isinstance(data["caption"], str)
+    assert len(data["caption"]) > 0
+    
+    # Verify caption content (should contain relevant keywords for our test image)
+    caption = data["caption"].lower()
+    assert any(word in caption for word in ["blue", "sky", "green", "landscape", "scene", "view"])
+
+def test_process_invalid_image(client, tmp_path):
+    # Create an invalid file
+    invalid_file = tmp_path / "test.txt"
+    invalid_file.write_text("This is not an image")
+    
+    # Test processing an invalid file
+    with open(invalid_file, "rb") as f:
+        response = client.post(
+            "/process/",
+            files={"file": ("test.txt", f, "text/plain")}
+        )
+    
+    assert response.status_code == 400
+    assert "detail" in response.json()
+    assert "not allowed" in response.json()["detail"]
+
+def test_process_corrupted_image(client, tmp_path):
+    # Create a corrupted image file
+    corrupted_image = tmp_path / "corrupted.jpg"
+    with open(corrupted_image, "wb") as f:
+        f.write(b"This is not a valid JPG file but has .jpg extension")
+    
+    # Test processing a corrupted image
+    with open(corrupted_image, "rb") as f:
+        response = client.post(
+            "/process/",
+            files={"file": ("corrupted.jpg", f, "image/jpeg")}
+        )
+    
+    assert response.status_code == 500
+    assert "detail" in response.json()
+    assert "Failed to process image" in response.json()["detail"] 
