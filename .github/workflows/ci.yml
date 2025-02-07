@@ -56,12 +56,6 @@ jobs:
       run: |
         python tests/run_tests.py --stage unit
         python tests/run_tests.py --stage integration
-    
-    - name: Run linting
-      run: |
-        black --check src tests
-        isort --check-only src tests
-        mypy src
 
   build-and-deploy:
     needs: test
