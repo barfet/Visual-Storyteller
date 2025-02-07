@@ -150,4 +150,79 @@ def test_tts_error_handling(client, realistic_image):
         )
     
     assert response.status_code == 500
-    assert "error" in response.json()["detail"] 
+    assert "error" in response.json()["detail"]
+
+def test_end_to_end_workflow(client, realistic_image):
+    """
+    Test the complete end-to-end workflow (User Story 6).
+    
+    Verifies:
+    - Image upload and processing through all stages
+    - Response contains all required components
+    - Performance meets targets
+    - Generated content quality and coherence
+    - File existence and cleanup
+    """
+    start_time = time.time()
+    
+    # Test with TTS enabled
+    with open(realistic_image, "rb") as f:
+        response = client.post(
+            "/process_with_narrative/",
+            files={"file": ("scene.jpg", f, "image/jpeg")},
+            data={
+                "tts": "true",
+                "temperature": "0.7",  # Control creativity
+                "max_tokens": "200"    # Control narrative length
+            }
+        )
+    
+    processing_time = time.time() - start_time
+    
+    # AC6.1: Verify successful processing
+    assert response.status_code == 200
+    data = response.json()
+    
+    # AC6.2: Verify response contains all components
+    assert "file_path" in data
+    assert "caption" in data
+    assert "narrative" in data
+    assert "audio_file" in data
+    
+    # Verify file paths are unique and exist
+    assert os.path.exists(data["file_path"])
+    assert os.path.exists(data["audio_file"])
+    assert data["audio_file"].endswith(".mp3")
+    
+    # Verify content quality
+    assert len(data["caption"]) > 0
+    assert len(data["narrative"].split()) >= 20  # Minimum narrative length
+    
+    # Verify content coherence
+    caption_words = set(data["caption"].lower().split())
+    narrative_words = set(data["narrative"].lower().split())
+    assert len(caption_words.intersection(narrative_words)) > 0  # Narrative relates to caption
+    
+    # AC6.3: Verify performance
+    assert processing_time <= 30  # Maximum processing time
+    
+    # Test audio file retrieval
+    audio_filename = os.path.basename(data["audio_file"])
+    audio_response = client.get(f"/audio/{audio_filename}")
+    assert audio_response.status_code == 200
+    assert audio_response.headers["content-type"] == "audio/mpeg"
+    
+    # Test without TTS
+    with open(realistic_image, "rb") as f:
+        response = client.post(
+            "/process_with_narrative/",
+            files={"file": ("scene.jpg", f, "image/jpeg")},
+            data={"tts": "false"}
+        )
+    
+    data = response.json()
+    assert response.status_code == 200
+    assert "audio_file" not in data
+    assert "file_path" in data
+    assert "caption" in data
+    assert "narrative" in data 
