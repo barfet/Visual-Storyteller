@@ -1,19 +1,30 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
+import os
 from src.services.file_service import FileService, InvalidFileTypeError
 from src.services.captioning_service import CaptioningService
 from src.services.narrative_service import NarrativeService, NarrativeGenerationError
 from src.config import settings
 from typing import Optional
 from src.services.tts_service import TTSService
-import os
-from fastapi.responses import FileResponse
 
 app = FastAPI(title="Visual Storyteller")
+
+# Mount static files
+static_dir = Path(__file__).parent.parent / "static"
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Initialize services with config
 file_service = FileService(upload_dir=settings.UPLOAD_DIR)
 captioning_service = CaptioningService()
 narrative_service = NarrativeService()
+
+@app.get("/")
+async def root():
+    """Serve the main HTML page."""
+    return FileResponse(str(static_dir / "index.html"))
 
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):

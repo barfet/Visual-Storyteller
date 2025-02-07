@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from pathlib import Path
 from PIL import Image
 from src.api.main import app
-from tests.test_api.fixtures import realistic_image, cleanup
+from tests.test_api.fixtures import realistic_image
 
 @pytest.fixture
 def client():

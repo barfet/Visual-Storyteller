@@ -3,7 +3,7 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 from src.api.main import app
-from tests.test_api.fixtures import realistic_image, cleanup
+from tests.test_api.fixtures import realistic_image
 
 @pytest.fixture
 def client():
