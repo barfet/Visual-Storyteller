@@ -4,6 +4,9 @@ from src.services.captioning_service import CaptioningService
 from src.services.narrative_service import NarrativeService, NarrativeGenerationError
 from src.config import settings
 from typing import Optional
+from src.services.tts_service import TTSService
+import os
+from fastapi.responses import FileResponse
 
 app = FastAPI(title="Visual Storyteller")
 
@@ -51,52 +54,62 @@ async def process_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/process_with_narrative/")
-async def process_image_with_narrative(
+async def process_with_narrative(
     file: UploadFile = File(...),
-    prompt_template: Optional[str] = Form(None),
-    max_tokens: Optional[int] = Form(None),
-    temperature: Optional[float] = Form(None)
-):
-    """
-    Process an image file to generate both a caption and a narrative.
-    
-    Args:
-        file: The image file to process
-        prompt_template: Optional custom prompt template for narrative generation
-        max_tokens: Optional maximum tokens for narrative generation
-        temperature: Optional temperature for controlling narrative creativity
-    
-    Returns:
-        dict: Contains the file path, caption, and generated narrative
-    """
+    prompt_template: str | None = Form(None),
+    max_tokens: int | None = Form(None),
+    temperature: float | None = Form(None),
+    tts: bool = Form(False),
+    language: str | None = Form(None)
+) -> dict:
+    """Process an image with captioning, narrative generation, and optional TTS."""
     try:
-        # First save the file
+        # Save uploaded file
         file_path = await file_service.save_upload(file)
         
         # Generate caption
         caption = await captioning_service.generate_caption(file_path)
         
-        # Generate narrative with optional parameters
-        narrative_kwargs = {}
-        if prompt_template is not None:
-            narrative_kwargs["prompt_template"] = prompt_template
-        if max_tokens is not None:
-            narrative_kwargs["max_tokens"] = int(max_tokens)  # Convert from string to int
-        if temperature is not None:
-            narrative_kwargs["temperature"] = float(temperature)  # Convert from string to float
-            
-        narrative = await narrative_service.generate_narrative(caption, **narrative_kwargs)
+        # Generate narrative
+        narrative = await narrative_service.generate_narrative(
+            caption,
+            prompt_template=prompt_template,
+            max_tokens=max_tokens,
+            temperature=temperature
+        )
         
-        return {
+        response = {
             "file_path": file_path,
             "caption": caption,
             "narrative": narrative
         }
-    except InvalidFileTypeError as e:
-        raise HTTPException(status_code=400, detail={"error": str(e)})
-    except NarrativeGenerationError as e:
-        raise HTTPException(status_code=500, detail={"error": str(e)})
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail={"error": f"Invalid parameter value: {str(e)}"})
+        
+        # Generate TTS if requested
+        if tts:
+            tts_service = TTSService()
+            audio_file = await tts_service.text_to_speech(narrative, language=language)
+            response["audio_file"] = audio_file
+        
+        return response
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail={"error": f"Failed to process image: {str(e)}"}) 
+        raise HTTPException(status_code=500, detail={"error": str(e)})
+
+@app.get("/audio/{filename}")
+async def get_audio(filename: str):
+    """Retrieve a generated audio file."""
+    try:
+        audio_path = os.path.join(settings.AUDIO_DIR, filename)
+        if not os.path.exists(audio_path):
+            raise HTTPException(status_code=404, detail={"error": "Audio file not found"})
+            
+        return FileResponse(
+            audio_path,
+            media_type="audio/mpeg",
+            filename=filename
+        )
+        
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail={"error": str(e)}) 

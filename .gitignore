@@ -37,6 +37,7 @@ data/sample_images/*
 .env
 .coverage
 htmlcov/
+data/
 
 # Logs
 *.log 
