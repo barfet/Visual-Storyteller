@@ -23,14 +23,20 @@ class CaptioningService:
     def processor(self):
         """Lazy initialization of the processor."""
         if self._processor is None:
-            self._processor = BlipProcessor.from_pretrained(settings.BLIP_MODEL)
+            self._processor = BlipProcessor.from_pretrained(
+                settings.BLIP_MODEL,
+                local_files_only=True  # Use cached files only
+            )
         return self._processor
     
     @property
     def model(self):
         """Lazy initialization of the model."""
         if self._model is None:
-            self._model = BlipForConditionalGeneration.from_pretrained(settings.BLIP_MODEL)
+            self._model = BlipForConditionalGeneration.from_pretrained(
+                settings.BLIP_MODEL,
+                local_files_only=True  # Use cached files only
+            )
             self._model.to(self.device)
         return self._model
     
