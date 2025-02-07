@@ -29,12 +29,4 @@ def realistic_image(tmp_path):
     test_image_path = tmp_path / "test_scene.jpg"
     img.save(test_image_path, "JPEG")
     
-    return str(test_image_path)
-
-@pytest.fixture(autouse=True)
-def cleanup():
-    """Clean up uploaded files after each test."""
-    yield
-    if os.path.exists(settings.UPLOAD_DIR):
-        shutil.rmtree(settings.UPLOAD_DIR)
-        os.makedirs(settings.UPLOAD_DIR) 
+    return str(test_image_path) 

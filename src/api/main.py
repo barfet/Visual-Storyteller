@@ -97,19 +97,59 @@ async def process_with_narrative(
 
 @app.get("/audio/{filename}")
 async def get_audio(filename: str):
-    """Retrieve a generated audio file."""
+    """
+    Retrieve a generated audio file.
+    
+    Args:
+        filename: Name of the audio file to retrieve
+        
+    Returns:
+        FileResponse: The audio file with appropriate content type
+        
+    Raises:
+        HTTPException: 404 if file not found, 400 if invalid filename, 500 for other errors
+    """
     try:
-        audio_path = os.path.join(settings.AUDIO_DIR, filename)
-        if not os.path.exists(audio_path):
-            raise HTTPException(status_code=404, detail={"error": "Audio file not found"})
+        # Validate filename to prevent directory traversal
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "Invalid filename: directory traversal not allowed"}
+            )
+            
+        # Ensure file has .mp3 extension
+        if not filename.endswith(".mp3"):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "Invalid file format: only MP3 files are allowed"}
+            )
+            
+        # Construct file path
+        file_path = os.path.join(settings.AUDIO_DIR, filename)
+        
+        # Check if path exists and is a file
+        if not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=404,
+                detail={"error": "Audio file not found"}
+            )
+            
+        if not os.path.isfile(file_path):
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "Invalid audio file"}
+            )
             
         return FileResponse(
-            audio_path,
+            file_path,
             media_type="audio/mpeg",
             filename=filename
         )
-        
+            
+    except HTTPException:
+        raise
     except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=500, detail={"error": str(e)}) 
+        raise HTTPException(
+            status_code=500,
+            detail={"error": f"Failed to retrieve audio file: {str(e)}"}
+        ) 

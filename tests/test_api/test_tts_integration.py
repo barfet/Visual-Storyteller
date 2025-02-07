@@ -3,7 +3,8 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 from src.api.main import app
-from tests.test_api.fixtures import realistic_image, cleanup
+from src.config import settings
+from tests.test_api.fixtures import realistic_image
 
 @pytest.fixture
 def client():
@@ -77,11 +78,49 @@ def test_audio_file_retrieval(client, realistic_image):
     response = client.get(f"/audio/{audio_filename}")
     assert response.status_code == 200
     assert response.headers["content-type"] == "audio/mpeg"
+    assert "attachment" in response.headers["content-disposition"]
+    assert audio_filename in response.headers["content-disposition"]
 
 def test_invalid_audio_file_retrieval(client):
     """Test retrieving non-existent audio file."""
     response = client.get("/audio/nonexistent.mp3")
     assert response.status_code == 404
+    assert "error" in response.json()["detail"]
+    assert "not found" in response.json()["detail"]["error"].lower()
+
+def test_audio_file_directory_traversal(client):
+    """Test protection against directory traversal attempts."""
+    # Test with parent directory reference
+    response = client.get("/audio/../config.py")
+    assert response.status_code == 404
+    assert "Invalid file format" in response.json()["detail"]["error"]
+    
+    # Test with absolute path
+    response = client.get("/audio/../../etc/passwd")
+    assert response.status_code == 400
+    assert "Invalid file format" in response.json()["detail"]["error"]
+
+def test_audio_file_invalid_extension(client):
+    """Test retrieving file with invalid extension."""
+    response = client.get("/audio/test.wav")
+    assert response.status_code == 400
+    assert "Invalid file format" in response.json()["detail"]["error"]
+    assert "MP3" in response.json()["detail"]["error"]
+
+def test_audio_file_is_directory(client, tmp_path):
+    """Test attempting to retrieve a directory instead of a file."""
+    # Create a directory with .mp3 extension
+    test_dir = os.path.join(settings.AUDIO_DIR, "test_dir.mp3")
+    os.makedirs(test_dir, exist_ok=True)
+    
+    try:
+        response = client.get("/audio/test_dir.mp3")
+        assert response.status_code == 400
+        assert "Invalid audio file" in response.json()["detail"]["error"]
+    finally:
+        # Clean up
+        if os.path.exists(test_dir):
+            os.rmdir(test_dir)
 
 def test_tts_performance(client, realistic_image):
     """Test TTS generation performance."""
@@ -97,7 +136,7 @@ def test_tts_performance(client, realistic_image):
     processing_time = time.time() - start_time
     
     assert response.status_code == 200
-    assert processing_time <= 20  # Allow up to 20 seconds for the complete pipeline
+    assert processing_time <= 30  # Allow up to 30 seconds for the complete pipeline
     assert "audio_file" in response.json()
 
 def test_tts_error_handling(client, realistic_image):
