@@ -3,6 +3,7 @@ from transformers import BlipProcessor, BlipForConditionalGeneration
 import torch
 from typing import Optional
 from src.config import settings
+import os
 
 class CaptioningService:
     """Service for generating captions from images using the BLIP model."""
@@ -23,21 +24,29 @@ class CaptioningService:
     def processor(self):
         """Lazy initialization of the processor."""
         if self._processor is None:
-            self._processor = BlipProcessor.from_pretrained(
-                settings.BLIP_MODEL,
-                local_files_only=True  # Use cached files only
-            )
+            try:
+                self._processor = BlipProcessor.from_pretrained(
+                    settings.BLIP_MODEL,
+                    local_files_only=True,  # Use cached files only
+                    cache_dir=os.getenv('TRANSFORMERS_CACHE', None)
+                )
+            except Exception as e:
+                raise Exception(f"Failed to load BLIP processor: {str(e)}. Please ensure enough disk space and model cache exists.")
         return self._processor
     
     @property
     def model(self):
         """Lazy initialization of the model."""
         if self._model is None:
-            self._model = BlipForConditionalGeneration.from_pretrained(
-                settings.BLIP_MODEL,
-                local_files_only=True  # Use cached files only
-            )
-            self._model.to(self.device)
+            try:
+                self._model = BlipForConditionalGeneration.from_pretrained(
+                    settings.BLIP_MODEL,
+                    local_files_only=True,  # Use cached files only
+                    cache_dir=os.getenv('TRANSFORMERS_CACHE', None)
+                )
+                self._model.to(self.device)
+            except Exception as e:
+                raise Exception(f"Failed to load BLIP model: {str(e)}. Please ensure enough disk space and model cache exists.")
         return self._model
     
     async def generate_caption(self, image_path: str) -> str:
