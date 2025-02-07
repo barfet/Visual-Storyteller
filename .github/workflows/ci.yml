@@ -47,9 +47,9 @@ jobs:
         access-role-arn: ${{ secrets.APPRUNNER_SERVICE_ROLE_ARN }}
         region: ${{ env.AWS_REGION }}
         cpu: 1
-        memory: 2048
+        memory: 2GB
         port: 8000
-        wait-for-service-stability: true
+        wait-for-service-stability-seconds: 600
         copy-env-vars: |
           OPENAI_API_KEY
           UPLOAD_DIR
