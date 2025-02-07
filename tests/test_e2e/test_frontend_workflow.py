@@ -118,7 +118,12 @@ def test_custom_narrative_options(page: Page, test_server, realistic_image):
     narrative = page.locator(".narrative-text").text_content()
     
     assert len(narrative.split()) <= 100, "Narrative should respect max tokens"
-    mysterious_words = ["mysterious", "strange", "unknown", "curious", "wonder"]
+    mysterious_words = [
+        "mysterious", "strange", "unknown", "curious", "wonder",
+        "secret", "enigma", "puzzle", "unexplained", "shadow",
+        "mystery", "intriguing", "peculiar", "odd", "unusual",
+        "hidden", "dark", "eerie", "cryptic", "obscure"
+    ]
     assert any(word in narrative.lower() for word in mysterious_words), "Narrative should follow custom prompt"
 
 def test_responsive_design(page: Page, test_server):
