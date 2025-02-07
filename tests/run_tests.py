@@ -11,8 +11,21 @@ def run_test_stage(stage_config):
     print(f"Running {stage_config['name']}")
     print(f"{'='*20}\n")
     
-    args = [stage_config["path"]] + stage_config["args"]
-    result = pytest.main(args)
+    # Build pytest arguments
+    pytest_args = [
+        stage_config["path"],
+        "-v",
+        "--tb=short"
+    ]
+    
+    # Add specific configuration for E2E tests
+    if stage_config["name"] == "e2e":
+        pytest_args.extend([
+            "-c", "tests/test_e2e/pytest.ini",  # Use E2E specific config
+            "--base-url=http://localhost:8000"
+        ])
+    
+    result = pytest.main(pytest_args)
     
     if result != 0:
         print(f"\n❌ {stage_config['name']} failed!")
@@ -43,17 +56,14 @@ def run_tests(stage=None):
         "unit": {
             "name": "Unit Tests",
             "path": "tests/test_services",
-            "args": ["-v", "--tb=short"]
         },
         "integration": {
             "name": "API Integration Tests",
             "path": "tests/test_api",
-            "args": ["-v", "--tb=short"]
         },
         "e2e": {
             "name": "End-to-End Tests",
             "path": "tests/test_e2e",
-            "args": ["-v", "--tb=short"]
         }
     }
     

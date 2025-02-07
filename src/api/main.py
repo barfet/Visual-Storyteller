@@ -99,7 +99,9 @@ async def process_with_narrative(
         if tts:
             tts_service = TTSService()
             audio_file = await tts_service.text_to_speech(narrative, language=language)
-            response["audio_file"] = audio_file
+            # Extract just the filename from the full path
+            audio_filename = os.path.basename(audio_file)
+            response["audio_file"] = audio_filename
         
         return response
         
