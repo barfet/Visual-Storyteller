@@ -92,13 +92,14 @@ def test_audio_file_directory_traversal(client):
     """Test protection against directory traversal attempts."""
     # Test with parent directory reference
     response = client.get("/audio/../config.py")
+    print("\nActual response:", response.json())  # Debug print
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"]["error"].lower()
+    assert "not found" in response.json()["detail"].lower()
     
     # Test with absolute path
     response = client.get("/audio/../../etc/passwd")
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"]["error"].lower()
+    assert "not found" in response.json()["detail"].lower()
 
 def test_audio_file_invalid_extension(client):
     """Test retrieving file with invalid extension."""
