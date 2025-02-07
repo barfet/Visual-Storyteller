@@ -1,10 +1,15 @@
-name: CI
+name: CI/CD
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: visual-storyteller
+  APP_RUNNER_SERVICE: visual-storyteller-service
 
 jobs:
   test:
@@ -15,7 +20,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     
     - name: Install dependencies
       run: |
@@ -33,13 +38,50 @@ jobs:
         isort --check-only src tests
         mypy src
 
-  build:
-    runs-on: ubuntu-latest
+  build-and-deploy:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
     
     steps:
     - uses: actions/checkout@v2
     
-    - name: Build Docker image
-      run: docker build -t visual-storyteller . 
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+    
+    - name: Build and push image to ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+    
+    - name: Deploy to App Runner
+      uses: awslabs/amazon-app-runner-deploy@main
+      with:
+        service: ${{ env.APP_RUNNER_SERVICE }}
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+        access-role-arn: ${{ secrets.APPRUNNER_SERVICE_ROLE_ARN }}
+        region: ${{ env.AWS_REGION }}
+        cpu: 1
+        memory: 2048
+        port: 8000
+        wait-for-service-stability: true
+        copy-env-vars: |
+          OPENAI_API_KEY
+          UPLOAD_DIR
+          AUDIO_DIR
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        UPLOAD_DIR: /app/data/sample_images
+        AUDIO_DIR: /app/data/audio 
