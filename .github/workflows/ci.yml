@@ -50,6 +50,11 @@ jobs:
         memory: 2GB
         port: 8000
         wait-for-service-stability-seconds: 600
+        health-check-path: /health
+        health-check-interval: 10
+        health-check-timeout: 5
+        health-check-healthy-threshold: 2
+        health-check-unhealthy-threshold: 3
         copy-env-vars: |
           OPENAI_API_KEY
           UPLOAD_DIR

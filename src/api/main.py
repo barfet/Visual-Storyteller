@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pathlib import Path
 import os
 from src.services.file_service import FileService, InvalidFileTypeError
@@ -20,6 +20,11 @@ app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 file_service = FileService(upload_dir=settings.UPLOAD_DIR)
 captioning_service = CaptioningService()
 narrative_service = NarrativeService()
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for App Runner."""
+    return {"status": "healthy", "service": "Visual Storyteller"}
 
 @app.get("/")
 async def root():
