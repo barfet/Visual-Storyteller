@@ -31,7 +31,8 @@ def test_process_with_tts(client, realistic_image):
     
     # Verify files exist
     assert os.path.exists(data["file_path"])
-    assert os.path.exists(data["audio_file"])
+    audio_path = os.path.join(settings.AUDIO_DIR, data["audio_file"])
+    assert os.path.exists(audio_path)
     assert data["audio_file"].endswith(".mp3")
 
 def test_tts_with_custom_language(client, realistic_image):
@@ -46,7 +47,8 @@ def test_tts_with_custom_language(client, realistic_image):
     assert response.status_code == 200
     data = response.json()
     assert "audio_file" in data
-    assert os.path.exists(data["audio_file"])
+    audio_path = os.path.join(settings.AUDIO_DIR, data["audio_file"])
+    assert os.path.exists(audio_path)
 
 def test_tts_disabled(client, realistic_image):
     """Test that TTS is not generated when disabled."""
@@ -72,7 +74,7 @@ def test_audio_file_retrieval(client, realistic_image):
         )
     
     data = response.json()
-    audio_filename = os.path.basename(data["audio_file"])
+    audio_filename = data["audio_file"]
     
     # Then try to retrieve it
     response = client.get(f"/audio/{audio_filename}")
@@ -191,7 +193,8 @@ def test_end_to_end_workflow(client, realistic_image):
     
     # Verify file paths are unique and exist
     assert os.path.exists(data["file_path"])
-    assert os.path.exists(data["audio_file"])
+    audio_path = os.path.join(settings.AUDIO_DIR, data["audio_file"])
+    assert os.path.exists(audio_path)
     assert data["audio_file"].endswith(".mp3")
     
     # Verify content quality
@@ -207,7 +210,7 @@ def test_end_to_end_workflow(client, realistic_image):
     assert processing_time <= 30  # Maximum processing time
     
     # Test audio file retrieval
-    audio_filename = os.path.basename(data["audio_file"])
+    audio_filename = data["audio_file"]
     audio_response = client.get(f"/audio/{audio_filename}")
     assert audio_response.status_code == 200
     assert audio_response.headers["content-type"] == "audio/mpeg"
