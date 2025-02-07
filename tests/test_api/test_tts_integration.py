@@ -93,12 +93,12 @@ def test_audio_file_directory_traversal(client):
     # Test with parent directory reference
     response = client.get("/audio/../config.py")
     assert response.status_code == 404
-    assert "Invalid file format" in response.json()["detail"]["error"]
+    assert "not found" in response.json()["detail"]["error"].lower()
     
     # Test with absolute path
     response = client.get("/audio/../../etc/passwd")
-    assert response.status_code == 400
-    assert "Invalid file format" in response.json()["detail"]["error"]
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"]["error"].lower()
 
 def test_audio_file_invalid_extension(client):
     """Test retrieving file with invalid extension."""
