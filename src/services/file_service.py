@@ -3,6 +3,7 @@ import uuid
 import aiofiles
 from fastapi import UploadFile
 from pathlib import Path
+from src.config import settings
 
 class InvalidFileTypeError(Exception):
     """Raised when an invalid file type is uploaded."""
@@ -11,19 +12,17 @@ class InvalidFileTypeError(Exception):
 class FileService:
     """Service for handling file uploads and storage."""
     
-    ALLOWED_EXTENSIONS = {'.jpg', '.jpeg', '.png'}
-    
-    def __init__(self, upload_dir: str = "data/sample_images"):
+    def __init__(self, upload_dir: str = None):
         """Initialize the file service with a upload directory."""
-        self.upload_dir = upload_dir
-        os.makedirs(upload_dir, exist_ok=True)
+        self.upload_dir = upload_dir or settings.UPLOAD_DIR
+        os.makedirs(self.upload_dir, exist_ok=True)
     
     def _get_file_extension(self, filename: str) -> str:
         """Extract and validate file extension."""
         extension = os.path.splitext(filename)[1].lower()
-        if extension not in self.ALLOWED_EXTENSIONS:
+        if extension not in settings.ALLOWED_EXTENSIONS:
             raise InvalidFileTypeError(
-                f"File type {extension} not allowed. Allowed types: {self.ALLOWED_EXTENSIONS}"
+                f"File type {extension} not allowed. Allowed types: {settings.ALLOWED_EXTENSIONS}"
             )
         return extension
     

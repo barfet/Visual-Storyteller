@@ -1,0 +1,117 @@
+# Visual Storyteller Project Rules
+
+# Project Structure
+structure:
+  src/:
+    - Main source code directory
+    - Contains all application code
+    - Modules should be organized by domain (api/, services/, etc.)
+  tests/:
+    - Test files mirror src/ structure
+    - Integration tests in test_api/
+    - Unit tests in test_services/
+    - Fixtures in conftest.py or domain-specific fixtures.py
+  data/:
+    - Storage for uploaded files and generated content
+    - Gitignored except for .gitkeep
+
+# Code Style
+style:
+  python:
+    - Follow PEP 8 guidelines
+    - Use type hints for all function parameters and return types
+    - Maximum line length: 100 characters
+    - Use docstrings for all public functions and classes
+    - Prefer explicit over implicit
+  imports:
+    - Group imports: stdlib, third-party, local
+    - Use absolute imports for project modules
+    - Avoid wildcard imports (*)
+  naming:
+    - Classes: PascalCase
+    - Functions/Variables: snake_case
+    - Constants: UPPER_SNAKE_CASE
+    - Private members: _leading_underscore
+
+# Testing
+testing:
+  structure:
+    - Unit tests: test_services/
+    - Integration tests: test_api/
+    - Each test file should correspond to a source file
+  naming:
+    - Test files: test_*.py
+    - Test functions: test_*
+    - Test classes: Test*
+  practices:
+    - Use pytest fixtures for common setup
+    - Mock external services (OpenAI, etc.)
+    - Test both success and error cases
+    - Include docstrings explaining test purpose
+    - Keep tests independent and idempotent
+
+# API Design
+api:
+  endpoints:
+    - RESTful naming conventions
+    - Clear HTTP method usage
+    - Consistent response structure
+    - Proper error handling and status codes
+  responses:
+    - Always return JSON
+    - Include appropriate status codes
+    - Consistent error message format
+    - Document with OpenAPI/Swagger
+
+# Error Handling
+errors:
+  - Use custom exception classes for domain-specific errors
+  - Provide meaningful error messages
+  - Include appropriate HTTP status codes
+  - Log errors with context
+  - Handle both expected and unexpected errors
+
+# Async/Await
+async:
+  - Use async/await for I/O operations
+  - Properly handle event loops in tests
+  - Use appropriate scopes for fixtures
+  - Handle cleanup in async context
+
+# Dependencies
+dependencies:
+  - List all requirements in requirements.txt
+  - Separate dev dependencies in requirements-dev.txt
+  - Pin specific versions for stability
+  - Document any system dependencies
+
+# Documentation
+docs:
+  - Docstrings for all public APIs
+  - README.md with setup and usage instructions
+  - Comments for complex logic
+  - API documentation via FastAPI automatic docs
+  - Include examples where appropriate
+
+# Environment
+env:
+  - Use .env for environment variables
+  - Provide .env.example as template
+  - Never commit sensitive data
+  - Use pydantic settings for config
+
+# Git
+git:
+  - Meaningful commit messages
+  - Use feature branches
+  - Keep commits focused and atomic
+  - Include tests with feature changes
+  - Update documentation as needed
+
+# CI/CD
+ci:
+  - Run all tests before merge
+  - Check code formatting
+  - Verify type hints
+  - Run security checks
+  - Build and test Docker image 

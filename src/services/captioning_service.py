@@ -2,6 +2,7 @@ from PIL import Image
 from transformers import BlipProcessor, BlipForConditionalGeneration
 import torch
 from typing import Optional
+from src.config import settings
 
 class CaptioningService:
     """Service for generating captions from images using the BLIP model."""
@@ -16,20 +17,20 @@ class CaptioningService:
         """
         self._processor = processor
         self._model = model
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = settings.DEVICE if torch.cuda.is_available() else "cpu"
     
     @property
     def processor(self):
         """Lazy initialization of the processor."""
         if self._processor is None:
-            self._processor = BlipProcessor.from_pretrained("Salesforce/blip-image-captioning-base")
+            self._processor = BlipProcessor.from_pretrained(settings.BLIP_MODEL)
         return self._processor
     
     @property
     def model(self):
         """Lazy initialization of the model."""
         if self._model is None:
-            self._model = BlipForConditionalGeneration.from_pretrained("Salesforce/blip-image-captioning-base")
+            self._model = BlipForConditionalGeneration.from_pretrained(settings.BLIP_MODEL)
             self._model.to(self.device)
         return self._model
     
