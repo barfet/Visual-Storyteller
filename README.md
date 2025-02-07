@@ -6,22 +6,23 @@ A FastAPI-based service that generates creative narratives from images using AI.
 
 - **Image Processing**: Upload and process JPG/PNG images
 - **AI Captioning**: Generate accurate image descriptions using BLIP model
-- **Narrative Generation**: Create creative stories from image captions using GPT models
+- **Narrative Generation**: Create creative stories from image captions using GPT-4
 - **Text-to-Speech**: Convert narratives into audio using gTTS
 - **RESTful API**: Full API support with FastAPI
 - **Frontend Interface**: Simple web interface for direct interaction
 - **Async Processing**: Efficient handling of concurrent requests
+- **CI/CD Pipeline**: Automated testing and deployment to AWS App Runner
 
 ## 🛠️ Tech Stack
 
 - **Python 3.10+**
 - **FastAPI**: Web framework
 - **Transformers**: BLIP image captioning
-- **OpenAI API**: Narrative generation
+- **OpenAI API**: GPT-4 for narrative generation
 - **gTTS**: Text-to-speech conversion
-- **PyTest**: Testing framework
-- **Docker**: Containerization
-- **Playwright**: E2E testing
+- **PyTest**: Testing framework with Playwright
+- **Docker**: Containerization and AWS ECR
+- **AWS**: App Runner, ECR, and IAM
 
 ## 📁 Project Structure
 
@@ -39,7 +40,9 @@ visual_storyteller/
 ├── data/
 │   ├── sample_images/ # Image storage
 │   └── audio/         # Generated audio files
-└── docker/            # Docker configuration
+├── .github/
+│   └── workflows/     # CI/CD configuration
+└── Dockerfile         # Container configuration
 ```
 
 ## 🚦 Getting Started
@@ -49,6 +52,7 @@ visual_storyteller/
 - Python 3.10+
 - ffmpeg (for audio processing)
 - OpenAI API key
+- AWS credentials (for deployment)
 
 ### Installation
 
@@ -69,11 +73,15 @@ source venv/bin/activate  # Linux/Mac
 3. Install dependencies:
 ```bash
 pip install -r requirements.txt
+pip install -r requirements-dev.txt  # For development
 ```
 
 4. Create `.env` file:
 ```bash
 OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-4-0125-preview
+OPENAI_MAX_TOKENS=200
+OPENAI_TEMPERATURE=0.7
 UPLOAD_DIR=data/sample_images
 AUDIO_DIR=data/audio
 ```
@@ -82,7 +90,11 @@ AUDIO_DIR=data/audio
 
 ```bash
 docker build -t visual-storyteller .
-docker run -p 8000:8000 -e OPENAI_API_KEY=your_api_key_here visual-storyteller
+docker run -p 8000:8000 \
+  -e OPENAI_API_KEY=your_api_key_here \
+  -e UPLOAD_DIR=/app/data/sample_images \
+  -e AUDIO_DIR=/app/data/audio \
+  visual-storyteller
 ```
 
 ## 🔄 API Endpoints
@@ -90,18 +102,18 @@ docker run -p 8000:8000 -e OPENAI_API_KEY=your_api_key_here visual-storyteller
 - `POST /process/`: Process image and generate caption
 - `POST /process_with_narrative/`: Generate caption and narrative
 - `GET /audio/{filename}`: Retrieve generated audio file
+- `GET /health`: Health check endpoint
 
 ## 🧪 Testing
 
 Run tests using pytest:
 ```bash
 # Run all tests
-pytest
+python tests/run_tests.py --stage all
 
 # Run specific test categories
-pytest tests/test_services  # Unit tests
-pytest tests/test_api      # Integration tests
-pytest tests/test_e2e      # E2E tests
+python tests/run_tests.py --stage unit
+python tests/run_tests.py --stage integration
 ```
 
 ## 📊 Performance
@@ -110,6 +122,7 @@ pytest tests/test_e2e      # E2E tests
 - Narrative generation: ~5-10 seconds
 - Audio generation: ~2-3 seconds
 - Concurrent request handling: Up to 50 requests/minute
+- App Runner configuration: 1 CPU, 2GB memory
 
 ## 🔐 Security
 
@@ -118,6 +131,21 @@ pytest tests/test_e2e      # E2E tests
 - Automatic file cleanup
 - Environment variable protection
 - No sensitive data in logs
+- AWS IAM role-based access
+
+## 🚀 Deployment
+
+The application uses GitHub Actions for CI/CD:
+1. Automated testing on pull requests
+2. Docker image build and push to AWS ECR
+3. Deployment to AWS App Runner
+4. Health check monitoring
+
+Required AWS secrets:
+- `AWS_ACCESS_KEY_ID`
+- `AWS_SECRET_ACCESS_KEY`
+- `APPRUNNER_SERVICE_ROLE_ARN`
+- `OPENAI_API_KEY`
 
 ## 🤝 Contributing
 
@@ -137,10 +165,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [OpenAI](https://openai.com/) for GPT models
 - [FastAPI](https://fastapi.tiangolo.com/) framework
 - [gTTS](https://gtts.readthedocs.io/) for text-to-speech
+- [AWS App Runner](https://aws.amazon.com/apprunner/) for deployment
 
-## 📧 Contact
-
-Your Name - [@yourtwitter](https://twitter.com/yourtwitter) - email@example.com
-
-Project Link: [https://github.com/yourusername/visual-storyteller](https://github.com/yourusername/visual-storyteller)
-```
