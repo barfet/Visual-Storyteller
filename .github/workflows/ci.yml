@@ -14,6 +14,15 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      OPENAI_MODEL: gpt-4-0125-preview
+      OPENAI_MAX_TOKENS: 200
+      OPENAI_TEMPERATURE: 0.7
+      UPLOAD_DIR: data/sample_images
+      AUDIO_DIR: data/audio
+      PYTHONPATH: ${{ github.workspace }}
+    
     steps:
     - uses: actions/checkout@v2
     
@@ -35,7 +44,7 @@ jobs:
     
     - name: Run tests
       run: |
-        pytest tests/ --cov=src --cov-report=xml
+        python tests/run_tests.py
     
     - name: Run linting
       run: |
