@@ -54,7 +54,8 @@ jobs:
     
     - name: Run tests
       run: |
-        python tests/run_tests.py
+        python tests/run_tests.py --stage unit
+        python tests/run_tests.py --stage integration
     
     - name: Run linting
       run: |
