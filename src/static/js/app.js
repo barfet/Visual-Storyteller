@@ -1,93 +1,69 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const dropZone = document.getElementById('dropZone');
+    // Elements
     const fileInput = document.getElementById('fileInput');
-    const ttsToggle = document.getElementById('ttsToggle');
-    const languageSelect = document.getElementById('languageSelect');
-    const resultSection = document.getElementById('resultSection');
-    const loadingSection = document.getElementById('loadingSection');
-    const audioSection = document.getElementById('audioSection');
-    const previewImage = document.getElementById('previewImage');
-    const captionText = document.getElementById('captionText');
-    const narrativeText = document.getElementById('narrativeText');
-    const audioPlayer = document.getElementById('audioPlayer');
-    const downloadAudio = document.getElementById('downloadAudio');
+    const imagePreview = document.querySelector('.image-preview');
+    const generateBtn = document.getElementById('generateBtn');
+    const ttsEnabled = document.getElementById('tts_enabled');
+    const maxTokens = document.getElementById('max_tokens');
+    const temperature = document.getElementById('temperature');
+    const promptTemplate = document.getElementById('prompt_template');
+    const loadingIndicator = document.querySelector('.loading-indicator');
+    const errorMessage = document.querySelector('.error-message');
+    const captionText = document.querySelector('.caption-text');
+    const narrativeText = document.querySelector('.narrative-text');
+    const audioSection = document.querySelector('.audio-section');
+    const audioPlayer = document.querySelector('.audio-player');
+    const resultsSection = document.querySelector('.results-section');
 
-    // Handle drag and drop
-    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, preventDefaults, false);
-        document.body.addEventListener(eventName, preventDefaults, false);
-    });
+    // File upload handling
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, highlight, false);
-    });
-
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, unhighlight, false);
-    });
-
-    dropZone.addEventListener('drop', handleDrop, false);
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', handleFileSelect);
-
-    function preventDefaults(e) {
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    function highlight(e) {
-        dropZone.classList.add('highlight');
-    }
-
-    function unhighlight(e) {
-        dropZone.classList.remove('highlight');
-    }
-
-    function handleDrop(e) {
-        const dt = e.dataTransfer;
-        const files = dt.files;
-        handleFiles(files);
-    }
-
-    function handleFileSelect(e) {
-        const files = e.target.files;
-        handleFiles(files);
-    }
-
-    function handleFiles(files) {
-        if (files.length === 0) return;
-        
-        const file = files[0];
+        // Validate file type
         if (!file.type.startsWith('image/')) {
-            showError('Please upload an image file');
+            showError('Invalid file type. Please upload an image file.');
             return;
         }
 
-        if (file.size > 5 * 1024 * 1024) {
-            showError('File size should be less than 5MB');
-            return;
-        }
-
-        // Show preview
+        // Create preview
         const reader = new FileReader();
         reader.onload = (e) => {
-            previewImage.src = e.target.result;
+            imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
         };
         reader.readAsDataURL(file);
+    });
 
-        // Process the image
-        processImage(file);
-    }
+    // Generate story
+    generateBtn.addEventListener('click', async () => {
+        if (!fileInput.files[0]) {
+            showError('Please select an image first.');
+            return;
+        }
 
-    async function processImage(file) {
         try {
-            showLoading();
+            showLoading(true);
+            resultsSection.style.display = 'none';
+            resultsSection.classList.remove('visible');
 
+            // Prepare form data
             const formData = new FormData();
-            formData.append('file', file);
-            formData.append('tts', ttsToggle.checked);
-            formData.append('language', languageSelect.value);
+            formData.append('file', fileInput.files[0]);
+            formData.append('tts', ttsEnabled.checked);
+            
+            if (maxTokens.value) {
+                formData.append('max_tokens', maxTokens.value);
+            }
+            
+            if (temperature.value) {
+                formData.append('temperature', temperature.value);
+            }
+            
+            if (promptTemplate.value) {
+                formData.append('prompt_template', promptTemplate.value);
+            }
 
+            // Process image
             const response = await fetch('/process_with_narrative/', {
                 method: 'POST',
                 body: formData
@@ -98,60 +74,86 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
-            displayResults(data);
+
+            // Validate response data
+            if (!data.caption && !data.narrative) {
+                throw new Error('Invalid response: missing caption and narrative');
+            }
+
+            // Update UI with results
+            resultsSection.style.display = 'block';
+            resultsSection.classList.add('visible');
+            
+            if (data.caption) {
+                captionText.textContent = data.caption;
+                captionText.parentElement.style.display = 'block';
+            }
+
+            if (data.narrative) {
+                narrativeText.textContent = data.narrative;
+                narrativeText.parentElement.style.display = 'block';
+            }
+
+            if (data.audio_file) {
+                audioPlayer.src = `/audio/${data.audio_file}`;
+                audioSection.style.display = 'block';
+            } else {
+                audioSection.style.display = 'none';
+            }
+
         } catch (error) {
             showError('Error processing image: ' + error.message);
         } finally {
-            hideLoading();
+            showLoading(false);
         }
-    }
+    });
 
-    function displayResults(data) {
-        captionText.textContent = data.caption;
-        narrativeText.textContent = data.narrative;
-
-        if (data.audio_file) {
-            audioPlayer.src = `/audio/${data.audio_file.split('/').pop()}`;
-            audioSection.classList.remove('hidden');
-            
-            // Update download button
-            downloadAudio.onclick = () => {
-                window.location.href = `/audio/${data.audio_file.split('/').pop()}`;
-            };
-        } else {
-            audioSection.classList.add('hidden');
-        }
-
-        resultSection.classList.remove('hidden');
-    }
-
-    function showLoading() {
-        loadingSection.classList.remove('hidden');
-        resultSection.classList.add('hidden');
-    }
-
-    function hideLoading() {
-        loadingSection.classList.add('hidden');
-    }
-
+    // Helper functions
     function showError(message) {
-        // You can implement a more sophisticated error display
-        alert(message);
+        errorMessage.textContent = message;
+        errorMessage.style.display = 'block';
+        setTimeout(() => {
+            errorMessage.style.display = 'none';
+        }, 5000);
     }
 
-    // Add highlight class for upload box
-    dropZone.addEventListener('dragenter', () => {
-        dropZone.style.borderColor = 'var(--primary-color)';
-        dropZone.style.backgroundColor = 'var(--background)';
-    });
+    function showLoading(show) {
+        loadingIndicator.style.display = show ? 'flex' : 'none';
+        generateBtn.disabled = show;
+    }
 
-    dropZone.addEventListener('dragleave', () => {
-        dropZone.style.borderColor = '';
-        dropZone.style.backgroundColor = '';
-    });
+    // Mobile menu handling
+    const menuToggle = document.querySelector('.menu-toggle');
+    const mobileNav = document.querySelector('.mobile-nav');
 
-    // Handle language select visibility based on TTS toggle
-    ttsToggle.addEventListener('change', () => {
-        languageSelect.style.display = ttsToggle.checked ? 'block' : 'none';
-    });
+    if (menuToggle && mobileNav) {
+        menuToggle.addEventListener('click', () => {
+            mobileNav.classList.toggle('active');
+        });
+    }
+
+    // Responsive layout handling
+    function updateLayout() {
+        const width = window.innerWidth;
+        const desktopLayout = document.querySelector('.desktop-layout');
+        const tabletLayout = document.querySelector('.tablet-layout');
+        const mobileMenu = document.querySelector('.mobile-menu');
+
+        if (width > 768) {
+            desktopLayout.style.display = 'block';
+            tabletLayout.style.display = 'none';
+            mobileMenu.style.display = 'none';
+        } else if (width > 480) {
+            desktopLayout.style.display = 'none';
+            tabletLayout.style.display = 'block';
+            mobileMenu.style.display = 'block';
+        } else {
+            desktopLayout.style.display = 'none';
+            tabletLayout.style.display = 'none';
+            mobileMenu.style.display = 'block';
+        }
+    }
+
+    window.addEventListener('resize', updateLayout);
+    updateLayout();
 }); 

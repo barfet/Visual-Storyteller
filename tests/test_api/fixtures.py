@@ -27,6 +27,6 @@ def realistic_image(tmp_path):
     
     # Save the image
     test_image_path = tmp_path / "test_scene.jpg"
-    img.save(test_image_path, "JPEG")
+    img.save(test_image_path, "JPEG", quality=95)
     
     return str(test_image_path) 

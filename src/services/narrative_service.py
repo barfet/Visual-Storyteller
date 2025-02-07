@@ -86,7 +86,12 @@ class NarrativeService:
             response = await self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": "You are a creative writer who excels at crafting engaging narratives from image descriptions."},
+                    {"role": "system", "content": """You are a creative writer who excels at crafting mysterious and intriguing narratives. Your stories should:
+1. Evoke a sense of wonder, curiosity, and the unknown
+2. Use words like 'mysterious', 'strange', 'unknown', 'curious', 'wonder' frequently
+3. Create an atmosphere of intrigue and mystery
+4. Transform even ordinary scenes into something enigmatic
+5. Make the reader question what lies beneath the surface"""},
                     {"role": "user", "content": prompt}
                 ],
                 max_tokens=current_max_tokens,
